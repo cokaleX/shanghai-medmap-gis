@@ -1,0 +1,11 @@
+*.qgz~
+*.qgs~
+*.qgd
+.qgis/
+Thumbs.db
+Desktop.ini
+*.tmp
+*.bak
+.env
+.env.*
+!.env.example
