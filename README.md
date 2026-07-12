@@ -50,7 +50,11 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 - 已验证研究区包含1个面要素，面积为9平方公里
 
-- 尚未下载或处理正式数据
+- 已获取医院、诊所、药店和道路OSM原始数据
+
+- 已记录查询条件、数据许可和初步质量检查结果
+
+- 尚未开始正式清洗和字段标准化
 
 
 
