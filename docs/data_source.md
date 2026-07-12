@@ -166,3 +166,12 @@ Data © OpenStreetMap contributors, available under the Open Database License (O
 
 - OpenStreetMap版权与许可：https://www.openstreetmap.org/copyright
 - 原始数据文件保持不覆盖，后续清洗结果另存到 `data/processed`。
+
+## 第一版标准成果
+
+- `data/processed/hospitals_processed.gpkg`：14条医院面。
+- `data/processed/clinics_processed.gpkg`：1条诊所点。
+- `data/processed/pharmacies_processed.gpkg`：6条药店点。
+- `data/processed/roads_processed.gpkg`：1095条道路线。
+
+全部标准成果采用EPSG:32651。清洗过程包括重投影、研究区裁剪、几何有效性检查、来源ID检查、重复检查和字段标准化。字段定义见 `docs/data_dictionary.md`。

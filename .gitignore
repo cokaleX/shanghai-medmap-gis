@@ -6,6 +6,9 @@ Thumbs.db
 Desktop.ini
 *.tmp
 *.bak
+*.gpkg-wal
+*.gpkg-shm
+*.gpkg-journal
 .env
 .env.*
 !.env.example

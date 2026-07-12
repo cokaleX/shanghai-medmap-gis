@@ -38,7 +38,7 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 
 
-- 当前阶段：阶段1——理解并获取OSM数据
+- 当前阶段：阶段2——已完成第一版数据清洗与标准化
 
 - 已确认QGIS和Git环境
 
@@ -54,7 +54,9 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 - 已记录查询条件、数据许可和初步质量检查结果
 
-- 尚未开始正式清洗和字段标准化
+- 已完成研究区裁剪、坐标转换、几何检查、重复检查和字段标准化
+
+- 已生成医院、诊所、药店和道路线标准GeoPackage
 
 
 
