@@ -38,7 +38,7 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 
 
-- 当前阶段：阶段3——已完成PostgreSQL/PostGIS基础建库与标准成果入库
+- 当前阶段：阶段4——已完成基础SQL与PostGIS空间查询
 
 - 已确认QGIS和Git环境
 
@@ -63,6 +63,12 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 - 已创建项目数据库 `huyi_space` 和 `processed` schema
 
 - 已将四个标准成果导入PostGIS，并验证记录数、字段类型、SRID、几何类型和索引
+
+- 已完成设施分类统计、空值检查、1千米范围查询和设施到最近道路查询
+
+- 已使用 `EXPLAIN (ANALYZE, BUFFERS)` 对比GiST最近邻索引与全量距离排序
+
+- 已生成并验证可重复执行的只读SQL脚本
 
 
 
