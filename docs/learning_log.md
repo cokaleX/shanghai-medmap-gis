@@ -305,3 +305,55 @@
 3. GeoServer默认数据目录与程序目录位于同一版本文件夹。
    - 处理方法：复制为独立的 `D:\GeoServer\data_huyi_space`，通过 `GEOSERVER_DATA_DIR` 指定项目配置目录。
 
+## 2026-07-14：搭建OpenLayers Web地图与WMS图层控制
+
+### 本次完成
+
+- 安装并验证Node.js 24.18.0、npm 11.16.0和Vite开发环境。
+- 创建原生JavaScript前端项目，安装OpenLayers 10.9.0。
+- 使用Vite开发服务器运行网页，并通过生产构建生成 `dist` 成果。
+- 创建OpenLayers地图，加载OSM底图并定位到徐家汇研究区。
+- 接入道路、医院、诊所和药店四个GeoServer TileWMS图层。
+- 创建图层控制面板，实现单图层显示与隐藏。
+- 在指导下亲自实现“全部隐藏”和“全部显示”按钮，并同步图层与复选框状态。
+- 使用CSS Grid完成标题栏、全屏地图、悬浮图层面板和720px响应式断点。
+- 使用浏览器Network面板检查WMS请求，并验证拖动和缩放会产生新的BBOX。
+- 初始网页骨架由AI辅助创建，随后逐段学习并验证HTML、CSS、JavaScript、OpenLayers和WMS代码。
+
+### 本次理解
+
+- Node.js是JavaScript运行环境；npm负责安装依赖、记录版本和执行项目脚本。
+- `package.json` 声明依赖和脚本，`package-lock.json` 锁定实际版本，`node_modules` 保存本机安装文件。
+- `npm run dev` 用于开发和自动刷新，`npm run build` 生成正式成果，`npm run preview` 预览构建成果。
+- HTML负责页面结构，CSS负责外观和布局，JavaScript负责交互行为。
+- OpenLayers中的Source负责数据来源，Layer负责显隐、顺序和透明度，View负责中心与缩放。
+- PostGIS数据继续使用EPSG:32651进行本地空间分析；OSM和网页View使用EPSG:3857进行显示。
+- GeoServer可以根据WMS请求将EPSG:32651数据动态重投影为EPSG:3857图片。
+- WMS的 `LAYERS` 指定图层，`CRS` 指定返回坐标系，`BBOX` 指定请求范围，`FORMAT` 指定图片格式。
+- 四个独立WMS图层便于分别控制，但拖动和缩放时会产生较多瓦片请求。
+- HTML的id用于唯一识别，class用于复用样式；JavaScript事件负责把用户操作转换为图层状态变化。
+- 修改图层状态时还要同步复选框状态，避免界面显示与地图实际状态不一致。
+
+### 前端验证结果
+
+- `npm list --depth=0` 显示OpenLayers 10.9.0和Vite 8.1.4。
+- OSM底图可正常缩放和拖动，徐家汇中心位置正确。
+- 四个WMS图层均可加载，页面显示“地图服务已加载”。
+- 道路、医院、诊所和药店可分别显示和隐藏。
+- “全部隐藏”和“全部显示”能够同步控制四个图层及四个复选框。
+- WMS请求中可查看 `LAYERS`、`CRS`、`BBOX` 和 `FORMAT`，拖动地图后BBOX发生变化。
+- 700px宽度使用窄屏样式，721px宽度恢复桌面样式，断点符合预期。
+- `npm run build` 成功转换165个模块，全过程无构建错误。
+
+### 遇到的问题及处理
+
+1. 使用 `http://127.0.0.1:5173/` 时浏览器拒绝连接，但 `http://localhost:5173/` 可以访问。
+   - 原因：Vite在当前Windows环境中监听localhost对应的IPv6地址 `::1`，没有监听IPv4地址 `127.0.0.1`。
+   - 处理方法：开发阶段使用终端实际显示的 `http://localhost:5173/`。
+2. GeoServer启动时先后出现缺少 `GEOSERVER_HOME` 和无法访问 `start.jar`。
+   - 原因：启动环境变量不完整，且启动脚本没有在GeoServer程序根目录中找到 `start.jar`。
+   - 处理方法：设置 `JAVA_HOME`、`GEOSERVER_HOME` 和 `GEOSERVER_DATA_DIR`，进入 `D:\GeoServer\3.0.0` 后运行启动脚本。
+3. OSM和四个独立WMS图层在拖动、缩放时会产生大量瓦片请求。
+   - 原因：每个可见图层都需要分别请求当前视图所需的多块瓦片。
+   - 处理方法：当前阶段保留独立图层以支持图层控制，后续再根据实际性能考虑缓存或组合请求。
+

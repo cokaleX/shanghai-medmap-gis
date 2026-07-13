@@ -38,7 +38,7 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 
 
-- 当前阶段：阶段5——已完成GeoServer地图服务发布
+- 当前阶段：阶段6——正在进行OpenLayers Web地图开发
 
 - 已确认QGIS和Git环境
 
@@ -77,6 +77,18 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 - 已验证WMS图片服务、WFS矢量服务和QGIS客户端空间对齐
 
 - 已创建可版本控制的SLD样式及医疗设施组合图层组
+
+- 已安装并验证Node.js、npm和Vite前端开发环境
+
+- 已创建原生JavaScript与OpenLayers Web地图项目
+
+- 已加载EPSG:3857的OSM底图，并定位到徐家汇研究区
+
+- 已接入道路、医院、诊所和药店四个GeoServer WMS图层
+
+- 已实现独立图层开关、全部显示和全部隐藏功能
+
+- 已验证WMS请求参数、地图拖动缩放、响应式布局和正式构建
 
 
 
