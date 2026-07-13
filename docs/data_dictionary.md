@@ -63,3 +63,22 @@
 - 无效几何：0条
 - 总长度：约164.37公里
 - `planned` 2条、`construction` 1条；保留在数据中，现状道路分析时应明确排除。
+
+## PostGIS表结构
+
+数据库：`huyi_space`
+schema：`processed`
+
+| GeoPackage成果 | PostGIS表 | 主键 | 来源唯一约束 | 空间字段 |
+|---|---|---|---|---|
+| `hospitals_processed` | `processed.hospitals` | `id` | `source_id` | `geometry(MultiPolygon,32651)` |
+| `clinics_processed` | `processed.clinics` | `id` | `source_id` | `geometry(Point,32651)` |
+| `pharmacies_processed` | `processed.pharmacies` | `id` | `source_id` | `geometry(Point,32651)` |
+| `roads_processed` | `processed.roads` | `id` | `source_id` | `geometry(MultiLineString,32651)` |
+
+- `id` 是PostgreSQL导入时生成的内部主键，由序列自动递增。
+- `source_id` 是OSM来源标识，设置为 `NOT NULL` 和 `UNIQUE`，用于来源追踪并防止重复入库。
+- GeoPackage内部字段 `fid` 未保留在正式PostGIS表中。
+- 四张表的 `geom` 均设置为 `NOT NULL`，并创建GiST空间索引。
+- 主键和 `source_id` 唯一约束分别创建B-tree索引。
+- 道路的 `length_m` 在PostgreSQL中映射为 `double precision`。

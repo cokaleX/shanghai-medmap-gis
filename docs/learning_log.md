@@ -171,3 +171,49 @@
 - 道路：1095条MultiLineString，18种道路类型，总长度约164.37公里。
 - 所有标准成果均为EPSG:32651，来源ID唯一，几何有效且位于研究区内。
 
+## 2026-07-13：建立PostgreSQL/PostGIS数据库并完成入库
+
+### 本次完成
+
+- 将PostgreSQL 18.4安装到D盘，并将数据库数据目录独立设置为 `D:\PostgreSQL\18\data`。
+- 安装PostGIS 3.6.2，并验证PostgreSQL服务、5432端口、PostGIS扩展文件及PROJ、GDAL环境变量。
+- 创建受限项目角色 `huyi_owner`、项目数据库 `huyi_space` 和 `processed` schema。
+- 在 `huyi_space` 中启用PostGIS扩展。
+- 从QGIS导入医院、诊所、药店和道路标准GeoPackage。
+- 验证四张表的记录数、空几何、无效几何、SRID、几何类型、主键和空间索引。
+- 删除导入产生的冗余 `fid`，将 `source_id` 和 `geom` 设置为非空，并为 `source_id` 添加唯一约束。
+- 在QGIS中使用 `huyi_owner` 连接数据库并正常显示四张PostGIS图层。
+
+### 本次理解
+
+- PostgreSQL是数据库服务器，PostGIS是按数据库启用的空间扩展；安装PostGIS文件后仍需执行 `CREATE EXTENSION postgis`。
+- `postgres` 是服务器超级管理员，日常QGIS连接应使用权限更小的项目角色。
+- database、schema和table分别对应数据库实例中的项目容器、名称空间和数据表。
+- `id` 是数据库内部主键，`source_id` 是外部来源标识，两者用途不同。
+- `PRIMARY KEY` 自动保证非空和唯一；`UNIQUE` 用于约束其他候选唯一字段，必要时应另加 `NOT NULL`。
+- B-tree适合编号、文本的精确匹配、范围和排序；GiST用于加速PostGIS空间关系查询。
+- 事务中的多项结构修改只有在 `COMMIT` 后才整体生效，失败时可用 `ROLLBACK` 撤销。
+- 图形客户端未响应不等于数据库任务失败，批量任务需要区分客户端显示开销与服务器执行状态。
+
+### 入库验证结果
+
+| 表 | 记录数 | 几何类型 | SRID | 主键 | 来源唯一约束 | 空间索引 |
+|---|---:|---|---:|---|---|---|
+| `processed.hospitals` | 14 | MultiPolygon | 32651 | `id` | `source_id` | GiST (`geom`) |
+| `processed.clinics` | 1 | Point | 32651 | `id` | `source_id` | GiST (`geom`) |
+| `processed.pharmacies` | 6 | Point | 32651 | `id` | `source_id` | GiST (`geom`) |
+| `processed.roads` | 1095 | MultiLineString | 32651 | `id` | `source_id` | GiST (`geom`) |
+
+- 四张表的空几何和无效几何均为0。
+- 道路零长度记录为0；属性总长度为164366.46米，按PostGIS几何重算为164366.37米，差异来自小数舍入。
+- QGIS项目未保存数据库用户名或明文密码。
+
+### 遇到的问题及处理
+
+1. 安装前本机只有Anaconda附带的 `pg_config` 开发组件，没有PostgreSQL服务器。
+   - 处理方法：先只读检查服务、程序、端口和客户端，再安装完整的PostgreSQL 18.4。
+2. PostGIS安装器可自动创建空间数据库和允许外部栅格访问。
+   - 处理方法：取消自动建库和Out-db Raster，手动创建项目数据库并显式启用扩展。
+3. QGIS导入GeoPackage时同时生成了PostgreSQL主键 `id` 并复制了文件内部 `fid`。
+   - 处理方法：验证 `source_id` 非空且唯一后，删除冗余 `fid`，保留内部主键和外部来源标识的双标识结构。
+

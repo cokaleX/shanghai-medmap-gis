@@ -38,7 +38,7 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 
 
-- 当前阶段：阶段2——已完成第一版数据清洗与标准化
+- 当前阶段：阶段3——已完成PostgreSQL/PostGIS基础建库与标准成果入库
 
 - 已确认QGIS和Git环境
 
@@ -57,6 +57,12 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 - 已完成研究区裁剪、坐标转换、几何检查、重复检查和字段标准化
 
 - 已生成医院、诊所、药店和道路线标准GeoPackage
+
+- 已安装并验证PostgreSQL 18.4与PostGIS 3.6.2
+
+- 已创建项目数据库 `huyi_space` 和 `processed` schema
+
+- 已将四个标准成果导入PostGIS，并验证记录数、字段类型、SRID、几何类型和索引
 
 
 
