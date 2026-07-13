@@ -251,3 +251,57 @@
 - 全量距离计算读取33个缓存页和1095条道路，首次对比执行时间0.357毫秒。
 - 完整脚本复验中，全量距离排序执行时间0.495毫秒；运行过程无ERROR。
 
+## 2026-07-13：使用GeoServer发布地图服务
+
+### 本次完成
+
+- 安装并验证Eclipse Temurin JDK 17.0.19+10，设置系统级 `JAVA_HOME` 和PATH。
+- 下载并解压GeoServer 3.0.0 Platform Independent Binary，使用内置Jetty运行。
+- 将程序目录与项目数据目录分离：程序位于 `D:\GeoServer\3.0.0`，配置位于 `D:\GeoServer\data_huyi_space`。
+- 首次手动启动GeoServer，验证8080端口、HTTP 200响应、Web应用和独立数据目录。
+- 修改默认GeoServer管理员密码。
+- 创建 `huyi_space` 工作区和 `huyi_postgis` PostGIS数据存储。
+- 创建只读数据库角色 `huyi_geoserver`，授予连接、schema使用和表查询权限，不授予写入权限。
+- 发布医院、诊所、药店和道路四个图层，统一声明EPSG:32651。
+- 通过WMS capabilities、WFS GeoJSON和QGIS客户端验证服务记录数、几何类型与空间对齐。
+- 创建并应用医院、诊所、药店和道路SLD样式。
+- 创建 `huyi_space:medical_facilities_map` 组合图层组。
+- 使用 `shutdown.bat` 正常关闭GeoServer，验证端口关闭、Java进程退出和清理日志。
+
+### 本次理解
+
+- JDK提供Java运行环境和诊断工具；GeoServer 3.0支持Java 17和21，本项目选择官方推荐的Temurin 17 LTS。
+- Platform Independent Binary自带Jetty，不需要另外安装Tomcat，适合初次学习时观察启动日志。
+- GeoServer程序目录可以随版本替换，数据目录保存工作区、数据存储、样式、用户和服务配置，应独立维护且不进入Git。
+- Workspace用于隔离项目名称空间；Store保存数据连接；Layer将数据表注册为可发布资源。
+- GeoServer数据库账号应遵循最小权限原则，本项目发布账号只能SELECT，不能INSERT。
+- WMS返回服务端渲染的地图图片，适合展示；WFS返回矢量几何与属性，适合查询和客户端分析。
+- 工作区专属WMS使用短图层名，全局WMS使用 `workspace:layer` 完整名称。
+- SLD控制地图符号，不修改PostGIS几何或属性；样式源文件应进入Git以便复现。
+- 图层组按照列表顺序合成服务端地图，独立图层仍可分别请求。
+- 正常停止服务应使用停止脚本，让Jetty和GeoServer完成清理，不应直接强制结束Java进程。
+
+### 服务验证结果
+
+| 图层 | WFS记录数 | 几何类型 | WMS CRS |
+|---|---:|---|---|
+| `huyi_space:hospitals` | 14 | MultiPolygon | EPSG:32651 |
+| `huyi_space:clinics` | 1 | Point | EPSG:32651 |
+| `huyi_space:pharmacies` | 6 | Point | EPSG:32651 |
+| `huyi_space:roads` | 1095 | MultiLineString | EPSG:32651 |
+
+- QGIS中的WMS、WFS与研究区边界和OSM底图对齐。
+- 组合图层组为 `huyi_space:medical_facilities_map`，四类内容均可正常渲染。
+- 800×800透明PNG GetMap请求返回HTTP 200。
+- GeoServer数据目录和所有密码均不进入Git仓库。
+
+### 遇到的问题及处理
+
+1. GeoServer 3.0管理界面中没有旧教程所称的 `Layer Preview` 菜单。
+   - 处理方法：根据3.0官方文档改用 `Browse Layers`，再从图层行点击OpenLayers。
+2. 首次导入SLD时出现 `Field 'styleEditor' is required`。
+   - 原因：只选择了本地文件，没有点击Upload将内容载入样式编辑器。
+   - 处理方法：按 `Choose file → Upload → Validate → Save` 顺序操作。
+3. GeoServer默认数据目录与程序目录位于同一版本文件夹。
+   - 处理方法：复制为独立的 `D:\GeoServer\data_huyi_space`，通过 `GEOSERVER_DATA_DIR` 指定项目配置目录。
+

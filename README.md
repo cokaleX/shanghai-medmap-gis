@@ -38,7 +38,7 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 
 
-- 当前阶段：阶段4——已完成基础SQL与PostGIS空间查询
+- 当前阶段：阶段5——已完成GeoServer地图服务发布
 
 - 已确认QGIS和Git环境
 
@@ -69,6 +69,14 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 - 已使用 `EXPLAIN (ANALYZE, BUFFERS)` 对比GiST最近邻索引与全量距离排序
 
 - 已生成并验证可重复执行的只读SQL脚本
+
+- 已安装并验证Temurin JDK 17与GeoServer 3.0.0
+
+- 已使用只读数据库账号发布医院、诊所、药店和道路图层
+
+- 已验证WMS图片服务、WFS矢量服务和QGIS客户端空间对齐
+
+- 已创建可版本控制的SLD样式及医疗设施组合图层组
 
 
 
