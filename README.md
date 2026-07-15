@@ -90,6 +90,10 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 - 已实现基于 `road_class` 和GeoServer `CQL_FILTER` 的道路分类筛选
 
+- 已通过Vite开发代理解决浏览器跨域访问GeoServer的问题
+
+- 已实现医院、诊所和药店WMS图层的点击属性查询
+
 - 已验证WMS请求参数、地图拖动缩放、响应式布局和正式构建
 
 

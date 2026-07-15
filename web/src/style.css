@@ -271,6 +271,98 @@ body { min-width: 320px; }
 .ol-attribution { right: 10px; bottom: 8px; font-size: 11px; }
 .ol-attribution.ol-uncollapsible { border-radius: 2px; background: rgb(255 255 255 / 82%); }
 
+.feature-info {
+  position: absolute;
+  z-index: 5;
+  right: 18px;
+  bottom: 34px;
+  width: 260px;
+  padding: 15px 16px;
+  border: 1px solid rgb(45 43 40 / 16%);
+  border-radius: 2px;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 3px 14px rgb(35 35 35 / 14%);
+  backdrop-filter: blur(4px);
+}
+
+.feature-info__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2ded8;
+}
+
+.feature-info__heading h2 {
+  margin: 0;
+  color: #292724;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.feature-info__close {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  color: #756f69;
+  background: transparent;
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.feature-info__close:hover,
+.feature-info__close:focus-visible {
+  color: var(--brand-red);
+}
+
+.feature-info__message {
+  margin: 12px 0 0;
+  color: #77716b;
+  font-size: 12px;
+}
+
+.feature-info__details {
+  display: grid;
+  gap: 0;
+  margin: 10px 0 0;
+}
+
+.feature-info__details[hidden] {
+  display: none;
+}
+
+.feature-info__details div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid #ece9e4;
+}
+
+.feature-info__details div:last-child {
+  border-bottom: 0;
+}
+
+.feature-info__details dt {
+  color: #817b75;
+  font-size: 11px;
+}
+
+.feature-info__details dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: #393633;
+  font-size: 11px;
+}
+
+.feature-info[hidden] {
+  display: none;
+}
+
 @media (max-width: 720px) {
   :root { --header-height: 60px; }
   .site-header { gap: 12px; padding: 0 16px; }
@@ -287,4 +379,9 @@ body { min-width: 320px; }
   .layer-panel__heading span { display: none; }
   .layer-list { gap: 5px; padding-top: 8px; }
   .layer-control { grid-template-columns: 16px 12px 1fr; gap: 6px; min-height: 20px; }
+  .feature-info {
+  right: 10px;
+  bottom: 40px;
+  width: calc(100% - 20px);
+}
 }

@@ -89,10 +89,54 @@ document.querySelector('#app').innerHTML = `
   </button>
 </div>
     </aside>
+<aside
+  class="feature-info"
+  id="feature-info"
+  aria-labelledby="feature-info-title"
+>
+  <div class="feature-info__heading">
+    <h2 id="feature-info-title">设施属性</h2>
+
+    <button
+      type="button"
+      class="feature-info__close"
+      id="feature-info-close"
+      aria-label="关闭设施属性面板"
+    >
+      ×
+    </button>
+  </div>
+
+  <p class="feature-info__message" id="feature-info-message">
+    请点击地图中的医疗设施
+  </p>
+
+  <dl class="feature-info__details" id="feature-info-details" hidden>
+    <div>
+      <dt>名称</dt>
+      <dd id="feature-name"></dd>
+    </div>
+
+    <div>
+      <dt>设施类型</dt>
+      <dd id="feature-type"></dd>
+    </div>
+
+    <div>
+      <dt>来源编号</dt>
+      <dd id="feature-source-id"></dd>
+    </div>
+
+    <div>
+      <dt>数据来源</dt>
+      <dd id="feature-source"></dd>
+    </div>
+  </dl>
+</aside>
   </main>
 `
 
-const geoserverWmsUrl = 'http://localhost:8080/geoserver/huyi_space/wms'
+const geoserverWmsUrl = '/geoserver/huyi_space/wms'
 const osmSource = new OSM()
 const wmsSources = new globalThis.Map()
 const overlayLayers = new globalThis.Map()
@@ -127,6 +171,114 @@ const map = new OLMap({
   controls: defaultControls().extend([
     new ScaleLine({ units: 'metric', bar: true, steps: 2, text: true, minWidth: 110 }),
   ]),
+})
+
+const featureInfoPanel = document.querySelector('#feature-info')
+const featureInfoClose = document.querySelector('#feature-info-close')
+const featureInfoMessage = document.querySelector('#feature-info-message')
+const featureInfoDetails = document.querySelector('#feature-info-details')
+const featureName = document.querySelector('#feature-name')
+const featureType = document.querySelector('#feature-type')
+const featureSourceId = document.querySelector('#feature-source-id')
+const featureSource = document.querySelector('#feature-source')
+
+featureInfoClose.addEventListener('click', () => {
+  featureInfoPanel.hidden = true
+})
+
+async function queryFeaturesAtCoordinate(source, coordinate, view) {
+  const featureInfoUrl = source.getFeatureInfoUrl(
+    coordinate,
+    view.getResolution(),
+    view.getProjection(),
+    {
+      INFO_FORMAT: 'application/json',
+      FEATURE_COUNT: 5,
+      FI_POINT_TOLERANCE: 10,
+    },
+  )
+
+  if (!featureInfoUrl) {
+    return []
+  }
+
+  const response = await fetch(featureInfoUrl)
+
+  if (!response.ok) {
+    throw new Error(`GetFeatureInfo请求失败：${response.status}`)
+  }
+
+  const data = await response.json()
+  return data.features
+}
+
+const facilityLayerIds = ['clinics', 'pharmacies', 'hospitals']
+
+const facilityTypeLabels = {
+  clinic: '诊所',
+  pharmacy: '药店',
+  hospital: '医院',
+}
+
+async function queryVisibleFacilityLayers(coordinate, view) {
+  for (const id of facilityLayerIds) {
+    const layer = overlayLayers.get(id)
+
+    if (!layer.getVisible()) {
+      continue
+    }
+
+    const features = await queryFeaturesAtCoordinate(
+      wmsSources.get(id),
+      coordinate,
+      view,
+    )
+
+    if (features.length > 0) {
+      return features[0]
+    }
+  }
+
+  return null
+}
+
+map.on('singleclick', async (event) => {
+  const view = map.getView()
+
+  featureInfoPanel.hidden = false
+
+  try {
+const feature = await queryVisibleFacilityLayers(
+  event.coordinate,
+  view,
+)
+
+    if (!feature) {
+      featureInfoMessage.textContent = '该位置未查询到医疗设施'
+      featureInfoMessage.hidden = false
+      featureInfoDetails.hidden = true
+      return
+    }
+
+    const properties = feature.properties
+
+featureName.textContent = properties.name || '未命名医疗设施'
+
+featureType.textContent =
+  facilityTypeLabels[properties.facility_type] ||
+  properties.facility_type ||
+  '—'
+    featureSourceId.textContent = properties.source_id || '—'
+    featureSource.textContent = properties.source || '—'
+
+    featureInfoMessage.hidden = true
+    featureInfoDetails.hidden = false
+  } catch (error) {
+    featureInfoMessage.textContent = '医疗设施属性查询失败'
+    featureInfoMessage.hidden = false
+    featureInfoDetails.hidden = true
+    console.error('医疗设施属性查询失败：', error)
+  }
 })
 
 document.querySelectorAll('[data-layer-id]').forEach((checkbox) => {
