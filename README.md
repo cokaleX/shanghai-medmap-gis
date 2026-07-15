@@ -38,7 +38,7 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 
 
-- 当前阶段：阶段6——正在进行OpenLayers Web地图开发
+- 当前阶段：阶段7——正在进行测试、整理和发布
 
 - 已确认QGIS和Git环境
 
@@ -88,11 +88,17 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 - 已实现独立图层开关、全部显示和全部隐藏功能
 
-- 已实现基于 `road_class` 和GeoServer `CQL_FILTER` 的道路分类筛选
+- 已实现基于 `road_class` 和GeoServer `CQL_FILTER` 的可折叠道路分组多选筛选
 
 - 已通过Vite开发代理解决浏览器跨域访问GeoServer的问题
 
 - 已实现医院、诊所和药店WMS图层的点击属性查询
+
+- 已加载研究区GeoJSON边界，并明确展示9平方公里数据处理范围
+
+- 已使用OpenLayers `Overlay` 实现桌面端坐标气泡和窄屏底部属性卡
+
+- 已加入真实设施数量、OSM获取日期和数据完整性说明
 
 - 已验证WMS请求参数、地图拖动缩放、响应式布局和正式构建
 

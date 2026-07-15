@@ -2,19 +2,60 @@ import './style.css'
 import 'ol/ol.css'
 
 import OLMap from 'ol/Map.js'
+import Overlay from 'ol/Overlay.js'
 import View from 'ol/View.js'
 import TileLayer from 'ol/layer/Tile.js'
+import VectorLayer from 'ol/layer/Vector.js'
 import OSM from 'ol/source/OSM.js'
 import TileWMS from 'ol/source/TileWMS.js'
+import VectorSource from 'ol/source/Vector.js'
+import GeoJSON from 'ol/format/GeoJSON.js'
 import ScaleLine from 'ol/control/ScaleLine.js'
 import { defaults as defaultControls } from 'ol/control/defaults.js'
 import { fromLonLat } from 'ol/proj.js'
+import { Fill, Stroke, Style } from 'ol/style.js'
 
 const layerDefinitions = [
   { id: 'roads', label: '道路', color: '#7d858d' },
   { id: 'hospitals', label: '医院', color: '#b82f2f' },
   { id: 'clinics', label: '诊所', color: '#267aa6' },
   { id: 'pharmacies', label: '药店', color: '#3e8b63' },
+]
+
+const roadGroupDefinitions = [
+  {
+    id: 'major',
+    label: '主干道路',
+    classes: [
+      'trunk',
+      'trunk_link',
+      'primary',
+      'primary_link',
+      'secondary',
+      'secondary_link',
+      'tertiary',
+    ],
+  },
+  {
+    id: 'community',
+    label: '社区道路',
+    classes: ['residential', 'living_street', 'unclassified'],
+  },
+  {
+    id: 'active',
+    label: '慢行道路',
+    classes: ['footway', 'pedestrian', 'cycleway', 'path', 'steps'],
+  },
+  {
+    id: 'service',
+    label: '服务道路',
+    classes: ['service'],
+  },
+  {
+    id: 'planned',
+    label: '规划／施工道路',
+    classes: ['planned', 'construction'],
+  },
 ]
 
 document.querySelector('#app').innerHTML = `
@@ -33,66 +74,101 @@ document.querySelector('#app').innerHTML = `
     <div id="map" aria-label="徐家汇研究区交互地图"></div>
     <aside class="layer-panel" aria-labelledby="layer-panel-title">
       <div class="layer-panel__heading">
-        <h2 id="layer-panel-title">图层</h2>
+        <h2 id="layer-panel-title">图层与筛选</h2>
         <span>GeoServer WMS</span>
       </div>
-<div class="road-filter">
-  <label for="road-class-filter">道路分类</label>
-
-<select id="road-class-filter">
-  <option value="">全部道路</option>
-  <option value="service">服务道路</option>
-  <option value="footway">步行道</option>
-  <option value="residential">居住区道路</option>
-  <option value="primary">主要道路</option>
-  <option value="tertiary">三级道路</option>
-  <option value="secondary">次要道路</option>
-  <option value="living_street">生活街道</option>
-  <option value="steps">台阶</option>
-  <option value="unclassified">未分类道路</option>
-  <option value="pedestrian">步行街</option>
-  <option value="trunk">干线道路</option>
-  <option value="trunk_link">干线匝道</option>
-  <option value="primary_link">主要道路匝道</option>
-  <option value="planned">规划道路</option>
-  <option value="construction">施工道路</option>
-  <option value="cycleway">自行车道</option>
-  <option value="path">小径</option>
-  <option value="secondary_link">次要道路匝道</option>
-</select>
-</div>
-
       <div class="layer-list">
+        <label class="layer-control">
+          <input
+            type="checkbox"
+            data-layer-id="study-area"
+            checked
+          >
+          <span
+            class="layer-symbol layer-symbol--boundary"
+            aria-hidden="true"
+          ></span>
+          <span>研究区边界</span>
+        </label>
         ${layerDefinitions.map((layer) => `
           <label class="layer-control">
             <input type="checkbox" data-layer-id="${layer.id}" checked>
-            <span class="layer-symbol" style="--layer-color: ${layer.color}" aria-hidden="true"></span>
+            <span
+              class="layer-symbol${layer.id === 'roads' ? ' layer-symbol--line' : ''}"
+              style="--layer-color: ${layer.color}"
+              aria-hidden="true"
+            ></span>
             <span>${layer.label}</span>
           </label>
         `).join('')}
       </div>
+      <details class="road-filter" open>
+        <summary>道路分类筛选</summary>
+        <div class="road-filter__content">
+          <div class="road-filter__groups">
+            ${roadGroupDefinitions.map((group) => `
+              <label>
+                <input
+                  type="checkbox"
+                  data-road-group="${group.id}"
+                  checked
+                >
+                <span>${group.label}</span>
+              </label>
+            `).join('')}
+          </div>
+          <div class="road-filter__actions">
+            <button type="button" id="road-filter-select-all">全选</button>
+            <button type="button" id="road-filter-clear">清空</button>
+          </div>
+        </div>
+      </details>
       <div class="layer-actions">
-  <button
-    type="button"
-    class="layer-action"
-    id="hide-all-layers"
-  >
-    全部隐藏
-  </button>
+        <button
+          type="button"
+          class="layer-action"
+          id="hide-all-layers"
+        >
+          全部隐藏
+        </button>
 
-  <button
-    type="button"
-    class="layer-action"
-    id="show-all-layers"
-  >
-    全部显示
-  </button>
-</div>
+        <button
+          type="button"
+          class="layer-action"
+          id="show-all-layers"
+        >
+          全部显示
+        </button>
+      </div>
+      <section class="data-overview" aria-labelledby="data-overview-title">
+        <h3 id="data-overview-title">数据概览</h3>
+        <dl>
+          <div>
+            <dt>研究区</dt>
+            <dd>9 km²</dd>
+          </div>
+          <div>
+            <dt>医院</dt>
+            <dd>14</dd>
+          </div>
+          <div>
+            <dt>诊所</dt>
+            <dd>1</dd>
+          </div>
+          <div>
+            <dt>药店</dt>
+            <dd>6</dd>
+          </div>
+        </dl>
+        <p>数据来源：OpenStreetMap · <time datetime="2026-07-12">2026-07-12</time></p>
+        <p>数量仅反映获取时已标注对象</p>
+      </section>
     </aside>
 <aside
   class="feature-info"
   id="feature-info"
   aria-labelledby="feature-info-title"
+  hidden
 >
   <div class="feature-info__heading">
     <h2 id="feature-info-title">设施属性</h2>
@@ -107,16 +183,9 @@ document.querySelector('#app').innerHTML = `
     </button>
   </div>
 
-  <p class="feature-info__message" id="feature-info-message">
-    请点击地图中的医疗设施
-  </p>
+  <p class="feature-info__message" id="feature-info-message"></p>
 
   <dl class="feature-info__details" id="feature-info-details" hidden>
-    <div>
-      <dt>名称</dt>
-      <dd id="feature-name"></dd>
-    </div>
-
     <div>
       <dt>设施类型</dt>
       <dd id="feature-type"></dd>
@@ -158,11 +227,34 @@ for (const definition of layerDefinitions) {
   overlayLayers.set(definition.id, new TileLayer({ source, visible: true }))
 }
 
+const studyAreaLayer = new VectorLayer({
+  source: new VectorSource({
+    url: '/data/study_area.geojson',
+    format: new GeoJSON({
+      dataProjection: 'EPSG:4326',
+      featureProjection: 'EPSG:3857',
+    }),
+  }),
+  style: new Style({
+    fill: new Fill({
+      color: 'rgba(184, 47, 47, 0.035)',
+    }),
+    stroke: new Stroke({
+      color: 'rgba(184, 47, 47, 0.85)',
+      width: 2,
+    }),
+  }),
+  zIndex: 20,
+})
+
+overlayLayers.set('study-area', studyAreaLayer)
+
 const map = new OLMap({
   target: 'map',
   layers: [
     new TileLayer({ source: osmSource }),
     ...layerDefinitions.map(({ id }) => overlayLayers.get(id)),
+    studyAreaLayer,
   ],
   view: new View({
     center: fromLonLat([121.43231, 31.19669]),
@@ -175,15 +267,32 @@ const map = new OLMap({
 
 const featureInfoPanel = document.querySelector('#feature-info')
 const featureInfoClose = document.querySelector('#feature-info-close')
+const featureInfoTitle = document.querySelector('#feature-info-title')
 const featureInfoMessage = document.querySelector('#feature-info-message')
 const featureInfoDetails = document.querySelector('#feature-info-details')
-const featureName = document.querySelector('#feature-name')
 const featureType = document.querySelector('#feature-type')
 const featureSourceId = document.querySelector('#feature-source-id')
 const featureSource = document.querySelector('#feature-source')
 
+const featureInfoOverlay = new Overlay({
+  element: featureInfoPanel,
+  positioning: 'bottom-center',
+  offset: [0, -16],
+  autoPan: {
+    animation: {
+      duration: 200,
+    },
+    margin: 24,
+  },
+  className: 'ol-overlay-container ol-selectable facility-overlay',
+  stopEvent: true,
+})
+
+map.addOverlay(featureInfoOverlay)
+
 featureInfoClose.addEventListener('click', () => {
   featureInfoPanel.hidden = true
+  featureInfoOverlay.setPosition(undefined)
 })
 
 async function queryFeaturesAtCoordinate(source, coordinate, view) {
@@ -245,15 +354,21 @@ async function queryVisibleFacilityLayers(coordinate, view) {
 map.on('singleclick', async (event) => {
   const view = map.getView()
 
+  featureInfoOverlay.setPosition(event.coordinate)
   featureInfoPanel.hidden = false
+  featureInfoTitle.textContent = '设施属性'
+  featureInfoMessage.textContent = '正在查询…'
+  featureInfoMessage.hidden = false
+  featureInfoDetails.hidden = true
 
   try {
-const feature = await queryVisibleFacilityLayers(
-  event.coordinate,
-  view,
-)
+    const feature = await queryVisibleFacilityLayers(
+      event.coordinate,
+      view,
+    )
 
     if (!feature) {
+      featureInfoTitle.textContent = '设施属性'
       featureInfoMessage.textContent = '该位置未查询到医疗设施'
       featureInfoMessage.hidden = false
       featureInfoDetails.hidden = true
@@ -262,18 +377,18 @@ const feature = await queryVisibleFacilityLayers(
 
     const properties = feature.properties
 
-featureName.textContent = properties.name || '未命名医疗设施'
-
-featureType.textContent =
-  facilityTypeLabels[properties.facility_type] ||
-  properties.facility_type ||
-  '—'
+    featureInfoTitle.textContent = properties.name || '未命名医疗设施'
+    featureType.textContent =
+      facilityTypeLabels[properties.facility_type] ||
+      properties.facility_type ||
+      '—'
     featureSourceId.textContent = properties.source_id || '—'
     featureSource.textContent = properties.source || '—'
 
     featureInfoMessage.hidden = true
     featureInfoDetails.hidden = false
   } catch (error) {
+    featureInfoTitle.textContent = '设施属性'
     featureInfoMessage.textContent = '医疗设施属性查询失败'
     featureInfoMessage.hidden = false
     featureInfoDetails.hidden = true
@@ -287,20 +402,60 @@ document.querySelectorAll('[data-layer-id]').forEach((checkbox) => {
     layer.setVisible(event.currentTarget.checked)
   })
 })
-const roadClassFilter = document.querySelector('#road-class-filter')
 
-roadClassFilter.addEventListener('change', (event) => {
-  const roadClass = event.currentTarget.value
-  const roadsSource = wmsSources.get('roads')
+const roadGroupCheckboxes = [
+  ...document.querySelectorAll('[data-road-group]'),
+]
+const roadsSource = wmsSources.get('roads')
+const allRoadClassCount = roadGroupDefinitions.reduce(
+  (total, group) => total + group.classes.length,
+  0,
+)
 
-  const cqlFilter = roadClass
-    ? `road_class = '${roadClass}'`
-    : 'INCLUDE'
+function updateRoadFilter() {
+  const selectedRoadClasses = roadGroupCheckboxes.flatMap((checkbox) => {
+    if (!checkbox.checked) {
+      return []
+    }
 
-  roadsSource.updateParams({
-    CQL_FILTER: cqlFilter,
+    const group = roadGroupDefinitions.find(
+      ({ id }) => id === checkbox.dataset.roadGroup,
+    )
+    return group.classes
   })
+
+  let cqlFilter = 'EXCLUDE'
+
+  if (selectedRoadClasses.length === allRoadClassCount) {
+    cqlFilter = 'INCLUDE'
+  } else if (selectedRoadClasses.length > 0) {
+    const values = selectedRoadClasses
+      .map((roadClass) => `'${roadClass}'`)
+      .join(', ')
+    cqlFilter = `road_class IN (${values})`
+  }
+
+  roadsSource.updateParams({ CQL_FILTER: cqlFilter })
+}
+
+roadGroupCheckboxes.forEach((checkbox) => {
+  checkbox.addEventListener('change', updateRoadFilter)
 })
+
+document.querySelector('#road-filter-select-all').addEventListener('click', () => {
+  roadGroupCheckboxes.forEach((checkbox) => {
+    checkbox.checked = true
+  })
+  updateRoadFilter()
+})
+
+document.querySelector('#road-filter-clear').addEventListener('click', () => {
+  roadGroupCheckboxes.forEach((checkbox) => {
+    checkbox.checked = false
+  })
+  updateRoadFilter()
+})
+
 const hideAllButton = document.querySelector('#hide-all-layers')
 
 hideAllButton.addEventListener('click', () => {

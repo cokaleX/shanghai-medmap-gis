@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "study_area",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 1, "id": 1, "left": 349137.76, "top": 3453959.54, "right": 352137.76, "bottom": 3450959.54, "row_index": 0, "col_index": 0, "area_name": "徐家汇研究区", "area_km2": 9.0 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 121.416341342747558, 31.210030893864356 ], [ 121.44782359075009, 31.210414686096293 ], [ 121.448265349907686, 31.183355803057466 ], [ 121.41679205291679, 31.182972417530518 ], [ 121.416341342747558, 31.210030893864356 ] ] ] } }
+]
+}
