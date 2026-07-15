@@ -36,6 +36,32 @@ document.querySelector('#app').innerHTML = `
         <h2 id="layer-panel-title">图层</h2>
         <span>GeoServer WMS</span>
       </div>
+<div class="road-filter">
+  <label for="road-class-filter">道路分类</label>
+
+<select id="road-class-filter">
+  <option value="">全部道路</option>
+  <option value="service">服务道路</option>
+  <option value="footway">步行道</option>
+  <option value="residential">居住区道路</option>
+  <option value="primary">主要道路</option>
+  <option value="tertiary">三级道路</option>
+  <option value="secondary">次要道路</option>
+  <option value="living_street">生活街道</option>
+  <option value="steps">台阶</option>
+  <option value="unclassified">未分类道路</option>
+  <option value="pedestrian">步行街</option>
+  <option value="trunk">干线道路</option>
+  <option value="trunk_link">干线匝道</option>
+  <option value="primary_link">主要道路匝道</option>
+  <option value="planned">规划道路</option>
+  <option value="construction">施工道路</option>
+  <option value="cycleway">自行车道</option>
+  <option value="path">小径</option>
+  <option value="secondary_link">次要道路匝道</option>
+</select>
+</div>
+
       <div class="layer-list">
         ${layerDefinitions.map((layer) => `
           <label class="layer-control">
@@ -109,7 +135,20 @@ document.querySelectorAll('[data-layer-id]').forEach((checkbox) => {
     layer.setVisible(event.currentTarget.checked)
   })
 })
+const roadClassFilter = document.querySelector('#road-class-filter')
 
+roadClassFilter.addEventListener('change', (event) => {
+  const roadClass = event.currentTarget.value
+  const roadsSource = wmsSources.get('roads')
+
+  const cqlFilter = roadClass
+    ? `road_class = '${roadClass}'`
+    : 'INCLUDE'
+
+  roadsSource.updateParams({
+    CQL_FILTER: cqlFilter,
+  })
+})
 const hideAllButton = document.querySelector('#hide-all-layers')
 
 hideAllButton.addEventListener('click', () => {

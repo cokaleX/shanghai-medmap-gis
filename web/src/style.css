@@ -138,6 +138,37 @@ body { min-width: 320px; }
   letter-spacing: 0.03em;
 }
 
+.road-filter {
+  display: grid;
+  gap: 6px;
+  padding: 11px 0;
+  border-bottom: 1px solid #e2ded8;
+}
+
+.road-filter label {
+  color: #68635e;
+  font-size: 10px;
+}
+
+.road-filter select {
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 1px solid #d8d3cd;
+  border-radius: 2px;
+  color: #4f4b47;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.road-filter select:focus-visible {
+  border-color: var(--brand-red);
+  outline: 2px solid var(--brand-red);
+  outline-offset: 1px;
+}
+
 .layer-list {
   display: grid;
   gap: 8px;
