@@ -545,3 +545,50 @@
    - 原因：QGIS同时生成了图层元数据旁车文件，但其CRS和空间范围没有随网页GeoJSON形成可用的发布元数据。
    - 处理方法：保留真实GeoJSON，删除QMD，并在网页公开数据目录中忽略后续同类旁车文件。
 
+## 2026-07-16：完成WebGIS本地服务与静态演示双模式
+
+### 本次完成
+
+- 使用QGIS自带GDAL将医院、诊所、药店和道路标准成果导出为RFC 7946 GeoJSON。
+- 将公开网页数据统一转换为EPSG:4326，并控制坐标精度，保留标准化业务字段。
+- 验证医院14条MultiPolygon、诊所1条Point、药店6条Point、道路1095条MultiLineString。
+- 验证四类数据的 `source_id` 均非空且唯一，道路仍包含18种 `road_class`。
+- 为OpenLayers增加双数据模式：本机默认使用GeoServer WMS，非本机域名默认使用静态GeoJSON。
+- 为静态设施和道路设置与GeoServer SLD一致的客户端样式。
+- 将道路筛选同时接入GeoServer CQL过滤和客户端矢量样式过滤。
+- 将设施点击查询同时接入WMS GetFeatureInfo和OpenLayers像素命中查询。
+- 使用 `import.meta.env.BASE_URL` 生成公开数据地址，并将Vite生产资源设置为相对路径。
+- 完成开发模式、生产预览、700×800窄屏和原GeoServer模式回归验证。
+
+### 本次理解
+
+- 双模式不是两套页面，而是同一套界面根据运行环境选择不同数据源和查询方式。
+- WMS模式由服务器渲染地图并通过GetFeatureInfo返回属性；GeoJSON模式由浏览器加载矢量、设置样式和判断点击命中。
+- 静态GeoJSON可以部署到GitHub Pages，但不能替代公网PostGIS或GeoServer后端，应在项目说明中明确能力边界。
+- CQL筛选会改变发送给GeoServer的请求参数；客户端筛选则让不符合条件的矢量要素返回空样式而不绘制。
+- `import.meta.env.BASE_URL` 配合Vite相对构建路径，可以避免把GitHub仓库名称硬编码进数据和资源地址。
+- 构建成功只能说明模块能够打包，仍需打开生产预览检查真实资源加载、交互和浏览器控制台。
+
+### 验证结果
+
+- 静态数据文件约为：医院7.5 KiB、诊所0.4 KiB、药店1.8 KiB、道路478.6 KiB。
+- 静态模式显示“静态演示数据已加载”，5个图层开关和5组道路筛选初始状态正确。
+- 清空道路分类后项目道路覆盖层消失，全选后恢复；控制台无警告或错误。
+- 点击医院可显示“中国人民解放军第四五五医院”、来源编号和OpenStreetMap来源。
+- 本地服务模式显示“地图服务已加载”，道路CQL筛选和医院GetFeatureInfo查询回归正常。
+- 700×800视窗没有横向溢出，图层面板和地图保持可用。
+- `npm run build` 成功转换204个模块，构建目录包含相对路径的CSS、JavaScript和5个GeoJSON文件。
+
+### 遇到的问题及处理
+
+1. QGIS的 `ogr2ogr` 首次导出失败，并短暂生成0字节GeoJSON。
+   - 原因：系统级 `PROJ_LIB` 和 `GDAL_DATA` 指向PostGIS附带的旧版运行数据，与QGIS 4.0.1自带GDAL不兼容。
+   - 处理方法：删除0字节文件，仅在导出命令进程内将PROJ和GDAL变量指向QGIS目录，不修改系统级配置；重新导出并逐层验证。
+2. 本机地址需要保留GeoServer模式，而GitHub Pages不能访问本机8080端口。
+   - 处理方法：根据页面主机名自动选择模式，并保留 `?mode=static` 和 `?mode=service` 作为本地验证开关。
+3. 静态道路不能使用GeoServer的CQL过滤。
+   - 处理方法：将选中道路类别保存为集合，静态矢量样式函数对未选类别返回空样式；同一组复选框继续驱动两种实现。
+4. 静态模式首次点击设施时，Chrome控制台显示Canvas `willReadFrequently` 黄色性能提示。
+   - 原因：OpenLayers 10.9.0在首次执行像素命中检测时，会分别测试Canvas读取参数为true、false和未设置时的速度，再选择当前浏览器中更快的方式；提示来自依赖库内部基准测试，不是应用报错。
+   - 处理方法：保留OpenLayers标准的 `forEachFeatureAtPixel()` 查询方式，不修改会被重新安装覆盖的 `node_modules`；以功能、红色错误和实际性能作为验收依据。
+

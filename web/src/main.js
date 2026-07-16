@@ -13,6 +13,8 @@ import GeoJSON from 'ol/format/GeoJSON.js'
 import ScaleLine from 'ol/control/ScaleLine.js'
 import { defaults as defaultControls } from 'ol/control/defaults.js'
 import { fromLonLat } from 'ol/proj.js'
+import CircleStyle from 'ol/style/Circle.js'
+import RegularShape from 'ol/style/RegularShape.js'
 import { Fill, Stroke, Style } from 'ol/style.js'
 
 const layerDefinitions = [
@@ -58,6 +60,89 @@ const roadGroupDefinitions = [
   },
 ]
 
+const requestedDataMode = new URLSearchParams(window.location.search).get('mode')
+const localHostnames = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
+const useStaticData =
+  requestedDataMode === 'static' ||
+  (requestedDataMode !== 'service' && !localHostnames.has(window.location.hostname))
+const dataSourceLabel = useStaticData ? '静态 GeoJSON' : 'GeoServer WMS'
+const initialStatusText = useStaticData ? '静态数据加载中' : '地图服务加载中'
+const publicDataUrl = (filename) => `${import.meta.env.BASE_URL}data/${filename}`
+
+let selectedRoadClasses = new Set(
+  roadGroupDefinitions.flatMap((group) => group.classes),
+)
+
+const hospitalStyle = new Style({
+  fill: new Fill({ color: 'rgba(217, 75, 75, 0.55)' }),
+  stroke: new Stroke({ color: '#8F1D2C', width: 1.4 }),
+})
+
+const clinicStyle = new Style({
+  image: new CircleStyle({
+    radius: 5,
+    fill: new Fill({ color: '#2F80ED' }),
+    stroke: new Stroke({ color: '#FFFFFF', width: 1.3 }),
+  }),
+})
+
+const pharmacyStyle = new Style({
+  image: new RegularShape({
+    points: 4,
+    radius: 5.5,
+    angle: Math.PI / 4,
+    fill: new Fill({ color: '#27AE60' }),
+    stroke: new Stroke({ color: '#FFFFFF', width: 1.3 }),
+  }),
+})
+
+const staticRoadStyleRules = [
+  {
+    classes: ['trunk', 'trunk_link', 'primary', 'primary_link'],
+    color: '#E76F51',
+    width: 3,
+  },
+  {
+    classes: ['secondary', 'secondary_link', 'tertiary'],
+    color: '#F4A261',
+    width: 2.2,
+  },
+  {
+    classes: ['residential', 'living_street', 'unclassified', 'service'],
+    color: '#8D99AE',
+    width: 1.2,
+  },
+  {
+    classes: ['footway', 'pedestrian', 'steps', 'cycleway', 'path'],
+    color: '#B8B8B8',
+    width: 0.9,
+    lineDash: [4, 3],
+  },
+  {
+    classes: ['planned', 'construction'],
+    color: '#9C6644',
+    width: 1.4,
+    lineDash: [6, 4],
+  },
+]
+
+const staticRoadStyles = new globalThis.Map()
+
+for (const rule of staticRoadStyleRules) {
+  const style = new Style({
+    stroke: new Stroke({
+      color: rule.color,
+      width: rule.width,
+      lineDash: rule.lineDash,
+      lineCap: 'round',
+    }),
+  })
+
+  rule.classes.forEach((roadClass) => {
+    staticRoadStyles.set(roadClass, style)
+  })
+}
+
 document.querySelector('#app').innerHTML = `
   <header class="site-header">
     <div class="brand-block">
@@ -67,7 +152,7 @@ document.querySelector('#app').innerHTML = `
     </div>
     <div class="map-status" role="status" aria-live="polite">
       <span class="status-dot" aria-hidden="true"></span>
-      <span id="status-text">地图服务加载中</span>
+      <span id="status-text">${initialStatusText}</span>
     </div>
   </header>
   <main class="map-shell">
@@ -75,7 +160,7 @@ document.querySelector('#app').innerHTML = `
     <aside class="layer-panel" aria-labelledby="layer-panel-title">
       <div class="layer-panel__heading">
         <h2 id="layer-panel-title">图层与筛选</h2>
-        <span>GeoServer WMS</span>
+        <span>${dataSourceLabel}</span>
       </div>
       <div class="layer-list">
         <label class="layer-control">
@@ -208,9 +293,40 @@ document.querySelector('#app').innerHTML = `
 const geoserverWmsUrl = '/geoserver/huyi_space/wms'
 const osmSource = new OSM()
 const wmsSources = new globalThis.Map()
+const staticSources = new globalThis.Map()
 const overlayLayers = new globalThis.Map()
 
 for (const definition of layerDefinitions) {
+  if (useStaticData) {
+    const source = new VectorSource({
+      url: publicDataUrl(`${definition.id}.geojson`),
+      format: new GeoJSON({
+        dataProjection: 'EPSG:4326',
+        featureProjection: 'EPSG:3857',
+      }),
+    })
+    const style =
+      definition.id === 'roads'
+        ? (feature) => {
+            const roadClass = feature.get('road_class')
+            return selectedRoadClasses.has(roadClass)
+              ? staticRoadStyles.get(roadClass)
+              : null
+          }
+        : {
+            hospitals: hospitalStyle,
+            clinics: clinicStyle,
+            pharmacies: pharmacyStyle,
+          }[definition.id]
+
+    staticSources.set(definition.id, source)
+    overlayLayers.set(
+      definition.id,
+      new VectorLayer({ source, style, visible: true }),
+    )
+    continue
+  }
+
   const source = new TileWMS({
     url: geoserverWmsUrl,
     params: {
@@ -229,7 +345,7 @@ for (const definition of layerDefinitions) {
 
 const studyAreaLayer = new VectorLayer({
   source: new VectorSource({
-    url: '/data/study_area.geojson',
+    url: publicDataUrl('study_area.geojson'),
     format: new GeoJSON({
       dataProjection: 'EPSG:4326',
       featureProjection: 'EPSG:3857',
@@ -329,7 +445,7 @@ const facilityTypeLabels = {
   hospital: '医院',
 }
 
-async function queryVisibleFacilityLayers(coordinate, view) {
+async function queryVisibleServiceFacilityLayers(coordinate, view) {
   for (const id of facilityLayerIds) {
     const layer = overlayLayers.get(id)
 
@@ -344,7 +460,34 @@ async function queryVisibleFacilityLayers(coordinate, view) {
     )
 
     if (features.length > 0) {
-      return features[0]
+      return features[0].properties
+    }
+  }
+
+  return null
+}
+
+function queryVisibleStaticFacilityLayers(pixel) {
+  for (const id of facilityLayerIds) {
+    const layer = overlayLayers.get(id)
+
+    if (!layer.getVisible()) {
+      continue
+    }
+
+    const feature = map.forEachFeatureAtPixel(
+      pixel,
+      (candidate) => candidate,
+      {
+        layerFilter: (candidateLayer) => candidateLayer === layer,
+        hitTolerance: 10,
+      },
+    )
+
+    if (feature) {
+      const properties = { ...feature.getProperties() }
+      delete properties.geometry
+      return properties
     }
   }
 
@@ -362,20 +505,17 @@ map.on('singleclick', async (event) => {
   featureInfoDetails.hidden = true
 
   try {
-    const feature = await queryVisibleFacilityLayers(
-      event.coordinate,
-      view,
-    )
+    const properties = useStaticData
+      ? queryVisibleStaticFacilityLayers(event.pixel)
+      : await queryVisibleServiceFacilityLayers(event.coordinate, view)
 
-    if (!feature) {
+    if (!properties) {
       featureInfoTitle.textContent = '设施属性'
       featureInfoMessage.textContent = '该位置未查询到医疗设施'
       featureInfoMessage.hidden = false
       featureInfoDetails.hidden = true
       return
     }
-
-    const properties = feature.properties
 
     featureInfoTitle.textContent = properties.name || '未命名医疗设施'
     featureType.textContent =
@@ -406,36 +546,42 @@ document.querySelectorAll('[data-layer-id]').forEach((checkbox) => {
 const roadGroupCheckboxes = [
   ...document.querySelectorAll('[data-road-group]'),
 ]
-const roadsSource = wmsSources.get('roads')
 const allRoadClassCount = roadGroupDefinitions.reduce(
   (total, group) => total + group.classes.length,
   0,
 )
 
 function updateRoadFilter() {
-  const selectedRoadClasses = roadGroupCheckboxes.flatMap((checkbox) => {
-    if (!checkbox.checked) {
-      return []
-    }
+  selectedRoadClasses = new Set(
+    roadGroupCheckboxes.flatMap((checkbox) => {
+      if (!checkbox.checked) {
+        return []
+      }
 
-    const group = roadGroupDefinitions.find(
-      ({ id }) => id === checkbox.dataset.roadGroup,
-    )
-    return group.classes
-  })
+      const group = roadGroupDefinitions.find(
+        ({ id }) => id === checkbox.dataset.roadGroup,
+      )
+      return group.classes
+    }),
+  )
+
+  if (useStaticData) {
+    overlayLayers.get('roads').changed()
+    return
+  }
 
   let cqlFilter = 'EXCLUDE'
 
-  if (selectedRoadClasses.length === allRoadClassCount) {
+  if (selectedRoadClasses.size === allRoadClassCount) {
     cqlFilter = 'INCLUDE'
-  } else if (selectedRoadClasses.length > 0) {
-    const values = selectedRoadClasses
+  } else if (selectedRoadClasses.size > 0) {
+    const values = [...selectedRoadClasses]
       .map((roadClass) => `'${roadClass}'`)
       .join(', ')
     cqlFilter = `road_class IN (${values})`
   }
 
-  roadsSource.updateParams({ CQL_FILTER: cqlFilter })
+  wmsSources.get('roads').updateParams({ CQL_FILTER: cqlFilter })
 }
 
 roadGroupCheckboxes.forEach((checkbox) => {
@@ -482,21 +628,38 @@ showAllButton.addEventListener('click', () => {
 
 const status = document.querySelector('.map-status')
 const statusText = document.querySelector('#status-text')
-const loadedWmsLayers = new Set()
+const loadedDataLayers = new Set()
 
-for (const [id, source] of wmsSources) {
-  source.on('tileloadend', () => {
-    loadedWmsLayers.add(id)
-    if (loadedWmsLayers.size === layerDefinitions.length) {
-      status.classList.remove('is-error')
-      statusText.textContent = '地图服务已加载'
-    }
-  })
+if (useStaticData) {
+  for (const [id, source] of staticSources) {
+    source.on('featuresloadend', () => {
+      loadedDataLayers.add(id)
+      if (loadedDataLayers.size === layerDefinitions.length) {
+        status.classList.remove('is-error')
+        statusText.textContent = '静态演示数据已加载'
+      }
+    })
 
-  source.on('tileloaderror', () => {
-    status.classList.add('is-error')
-    statusText.textContent = 'GeoServer 图层异常'
-  })
+    source.on('featuresloaderror', () => {
+      status.classList.add('is-error')
+      statusText.textContent = '静态数据加载异常'
+    })
+  }
+} else {
+  for (const [id, source] of wmsSources) {
+    source.on('tileloadend', () => {
+      loadedDataLayers.add(id)
+      if (loadedDataLayers.size === layerDefinitions.length) {
+        status.classList.remove('is-error')
+        statusText.textContent = '地图服务已加载'
+      }
+    })
+
+    source.on('tileloaderror', () => {
+      status.classList.add('is-error')
+      statusText.textContent = 'GeoServer 图层异常'
+    })
+  }
 }
 
 window.addEventListener('resize', () => map.updateSize())

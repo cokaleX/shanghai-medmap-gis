@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "clinics",
+"xy_coordinate_resolution": 1e-06,
+"features": [
+{ "type": "Feature", "properties": { "source_id": "n6467392385", "osm_id": "6467392385", "osm_type": "node", "name": "western eye center", "facility_type": "clinic", "address": "永嘉路4", "source": "OpenStreetMap" }, "geometry": { "type": "Point", "coordinates": [ 121.446628, 31.207998 ] } }
+]
+}

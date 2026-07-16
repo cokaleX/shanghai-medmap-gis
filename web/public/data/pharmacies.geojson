@@ -1,0 +1,13 @@
+{
+"type": "FeatureCollection",
+"name": "pharmacies",
+"xy_coordinate_resolution": 1e-06,
+"features": [
+{ "type": "Feature", "properties": { "source_id": "n4280457990", "osm_id": "4280457990", "osm_type": "node", "name": null, "facility_type": "pharmacy", "address": null, "source": "OpenStreetMap" }, "geometry": { "type": "Point", "coordinates": [ 121.431734, 31.18642 ] } },
+{ "type": "Feature", "properties": { "source_id": "n4448663400", "osm_id": "4448663400", "osm_type": "node", "name": "汇丰大药房", "facility_type": "pharmacy", "address": "中山南二路920号", "source": "OpenStreetMap" }, "geometry": { "type": "Point", "coordinates": [ 121.444414, 31.186264 ] } },
+{ "type": "Feature", "properties": { "source_id": "n4786491124", "osm_id": "4786491124", "osm_type": "node", "name": "汇丰大药房", "facility_type": "pharmacy", "address": "天钥桥路65号", "source": "OpenStreetMap" }, "geometry": { "type": "Point", "coordinates": [ 121.437095, 31.194786 ] } },
+{ "type": "Feature", "properties": { "source_id": "n5817773861", "osm_id": "5817773861", "osm_type": "node", "name": null, "facility_type": "pharmacy", "address": null, "source": "OpenStreetMap" }, "geometry": { "type": "Point", "coordinates": [ 121.428969, 31.207916 ] } },
+{ "type": "Feature", "properties": { "source_id": "n8234181821", "osm_id": "8234181821", "osm_type": "node", "name": null, "facility_type": "pharmacy", "address": null, "source": "OpenStreetMap" }, "geometry": { "type": "Point", "coordinates": [ 121.421634, 31.201119 ] } },
+{ "type": "Feature", "properties": { "source_id": "n13232142673", "osm_id": "13232142673", "osm_type": "node", "name": "汇丰大药房", "facility_type": "pharmacy", "address": null, "source": "OpenStreetMap" }, "geometry": { "type": "Point", "coordinates": [ 121.443151, 31.19394 ] } }
+]
+}

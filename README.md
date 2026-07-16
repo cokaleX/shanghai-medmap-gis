@@ -16,6 +16,8 @@
 
 本项目不用于医疗诊断、医疗决策或医院质量评价。
 
+公开网页采用静态GeoJSON演示，不直接连接本机PostGIS或GeoServer；本地完整模式仍通过GeoServer提供WMS和GetFeatureInfo服务。
+
 
 
 ## 研究区域
@@ -101,6 +103,26 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 - 已加入真实设施数量、OSM获取日期和数据完整性说明
 
 - 已验证WMS请求参数、地图拖动缩放、响应式布局和正式构建
+
+- 已将四类标准成果导出为EPSG:4326 GeoJSON，并完成字段、记录数和几何类型复核
+
+- 已实现本地GeoServer服务模式与GitHub Pages静态演示模式自动切换
+
+- 已验证静态模式的图层显示、道路筛选、设施气泡、响应式布局和生产构建
+
+
+
+## WebGIS运行模式
+
+
+
+- 本地完整模式：启动GeoServer后在 `web` 目录执行 `npm run dev`，通过WMS显示图层并使用GetFeatureInfo查询属性。
+
+- 静态演示模式：访问本地页面时添加 `?mode=static`，直接加载 `web/public/data` 中的GeoJSON；部署到非本机域名后会自动使用此模式。
+
+- `web/vite.config.js` 使用相对构建路径，使生产成果可以发布在GitHub Pages的仓库子路径下。
+
+- 静态演示用于作品展示和基础交互，不代表PostGIS与GeoServer后端已经部署到公网。
 
 
 
