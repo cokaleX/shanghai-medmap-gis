@@ -4,6 +4,10 @@
 
 英文名称：Shanghai MedMap
 
+在线演示：[https://cokalex.github.io/shanghai-medmap-gis/](https://cokalex.github.io/shanghai-medmap-gis/)
+
+源码仓库：[https://github.com/cokaleX/shanghai-medmap-gis](https://github.com/cokaleX/shanghai-medmap-gis)
+
 
 
 ## 项目简介
@@ -109,6 +113,8 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 - 已实现本地GeoServer服务模式与GitHub Pages静态演示模式自动切换
 
 - 已验证静态模式的图层显示、道路筛选、设施气泡、响应式布局和生产构建
+
+- 已使用GitHub Actions自动构建并发布GitHub Pages静态演示
 
 
 

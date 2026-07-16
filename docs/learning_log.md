@@ -592,3 +592,40 @@
    - 原因：OpenLayers 10.9.0在首次执行像素命中检测时，会分别测试Canvas读取参数为true、false和未设置时的速度，再选择当前浏览器中更快的方式；提示来自依赖库内部基准测试，不是应用报错。
    - 处理方法：保留OpenLayers标准的 `forEachFeatureAtPixel()` 查询方式，不修改会被重新安装覆盖的 `node_modules`；以功能、红色错误和实际性能作为验收依据。
 
+## 2026-07-16：发布GitHub仓库与Pages在线演示
+
+### 本次完成
+
+- 创建公开仓库 `cokaleX/shanghai-medmap-gis`，将本地 `main` 与 `origin/main` 建立跟踪关系。
+- 首次推送158个Git对象，远程仓库保留完整阶段提交历史。
+- 在仓库Pages设置中选择GitHub Actions作为发布源。
+- 创建 `.github/workflows/deploy-pages.yml` 自动部署工作流。
+- 工作流在GitHub Ubuntu环境中检出代码、配置Node.js 24、执行 `npm ci`、运行Vite构建并上传 `web/dist`。
+- 使用Pages专用部署任务发布构建产物，不把本地 `dist` 提交进Git仓库。
+- 成功发布公开演示：`https://cokalex.github.io/shanghai-medmap-gis/`。
+- 从公网地址独立验证页面身份、静态数据模式、图层初始状态、道路筛选、控制台和页面溢出。
+
+### 本次理解
+
+- `origin` 是本地为GitHub远程仓库设置的常用简称；`git push -u origin main` 同时上传分支并建立后续默认跟踪关系。
+- GitHub Actions是由仓库事件触发的自动任务；本项目在Web文件或部署工作流推送到 `main` 时自动构建和发布。
+- `npm ci` 严格按照 `package-lock.json` 安装依赖，适合可重复的自动构建环境。
+- Pages发布的是Actions上传的 `web/dist` 构建产物，而不是直接运行仓库中的Vite开发服务器。
+- `contents: read`、`pages: write` 和 `id-token: write` 分别用于读取代码、写入Pages和完成可信部署身份验证。
+- CI/CD表示持续集成与持续交付；在本项目中，代码推送后的安装、构建、上传和发布由工作流自动完成。
+
+### 验证结果
+
+- GitHub Actions的build和deploy任务均成功完成，Pages公开网址可访问。
+- 公网页面标题为“沪医空间｜徐家汇社区医疗设施地图”。
+- 页面自动显示“静态 GeoJSON”和“静态演示数据已加载”，没有访问本机GeoServer。
+- 研究区边界、道路、医院、诊所和药店5个图层初始均为选中状态。
+- 5组道路分类初始均选中；点击清空后道路组复选框全部取消且页面继续正常响应。
+- 浏览器控制台没有警告或错误，页面没有横向溢出。
+
+### 遇到的问题及处理
+
+1. 本地模拟Actions执行 `npm ci` 时出现Windows `EPERM`，随后Vite命令暂时不可用。
+   - 原因：5173端口的Vite开发进程正在使用Rolldown原生模块，`npm ci` 需要先删除并重建 `node_modules`，Windows拒绝删除正在使用的文件。
+   - 处理方法：确认占用进程后关闭本次验收启动的Vite进程，重新执行 `npm ci` 和 `npm run build`，依赖恢复且204个模块构建成功；GitHub的独立Ubuntu环境不受本机锁定影响。
+
