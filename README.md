@@ -116,6 +116,10 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 - 已使用GitHub Actions自动构建并发布GitHub Pages静态演示
 
+- 已增加基于项目道路GeoJSON的简洁底图兜底，在线OSM瓦片不可用时仍可浏览核心空间成果
+
+- 已将720px以下图层面板改为默认收起的移动端抽屉
+
 
 
 ## WebGIS运行模式
@@ -125,6 +129,10 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 - 本地完整模式：启动GeoServer后在 `web` 目录执行 `npm run dev`，通过WMS显示图层并使用GetFeatureInfo查询属性。
 
 - 静态演示模式：访问本地页面时添加 `?mode=static`，直接加载 `web/public/data` 中的GeoJSON；部署到非本机域名后会自动使用此模式。
+
+- 静态模式保留在线OSM底图，同时在下方绘制项目道路简图；可使用 `?basemap=local` 强制验证无在线底图场景。
+
+- 720px以下页面默认只显示“图层”按钮，需要时打开抽屉，关闭后地图恢复完整可视区域。
 
 - `web/vite.config.js` 使用相对构建路径，使生产成果可以发布在GitHub Pages的仓库子路径下。
 

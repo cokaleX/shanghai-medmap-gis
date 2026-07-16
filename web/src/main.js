@@ -60,7 +60,8 @@ const roadGroupDefinitions = [
   },
 ]
 
-const requestedDataMode = new URLSearchParams(window.location.search).get('mode')
+const queryParameters = new URLSearchParams(window.location.search)
+const requestedDataMode = queryParameters.get('mode')
 const localHostnames = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
 const useStaticData =
   requestedDataMode === 'static' ||
@@ -68,6 +69,7 @@ const useStaticData =
 const dataSourceLabel = useStaticData ? '静态 GeoJSON' : 'GeoServer WMS'
 const initialStatusText = useStaticData ? '静态数据加载中' : '地图服务加载中'
 const publicDataUrl = (filename) => `${import.meta.env.BASE_URL}data/${filename}`
+const useOnlineBasemap = queryParameters.get('basemap') !== 'local'
 
 let selectedRoadClasses = new Set(
   roadGroupDefinitions.flatMap((group) => group.classes),
@@ -143,6 +145,24 @@ for (const rule of staticRoadStyleRules) {
   })
 }
 
+const fallbackMajorRoadClasses = new Set([
+  'trunk',
+  'trunk_link',
+  'primary',
+  'primary_link',
+  'secondary',
+  'secondary_link',
+  'tertiary',
+])
+
+const fallbackMajorRoadStyle = new Style({
+  stroke: new Stroke({ color: '#c5beb3', width: 1.6, lineCap: 'round' }),
+})
+
+const fallbackLocalRoadStyle = new Style({
+  stroke: new Stroke({ color: '#d7d1c8', width: 0.8, lineCap: 'round' }),
+})
+
 document.querySelector('#app').innerHTML = `
   <header class="site-header">
     <div class="brand-block">
@@ -157,12 +177,48 @@ document.querySelector('#app').innerHTML = `
   </header>
   <main class="map-shell">
     <div id="map" aria-label="徐家汇研究区交互地图"></div>
-    <aside class="layer-panel" aria-labelledby="layer-panel-title">
+    <button
+      type="button"
+      class="layer-panel-toggle"
+      id="layer-panel-toggle"
+      aria-controls="layer-panel"
+      aria-expanded="false"
+    >
+      <span class="layer-panel-toggle__icon" aria-hidden="true"></span>
+      图层
+    </button>
+    <aside
+      class="layer-panel"
+      id="layer-panel"
+      aria-labelledby="layer-panel-title"
+    >
       <div class="layer-panel__heading">
-        <h2 id="layer-panel-title">图层与筛选</h2>
-        <span>${dataSourceLabel}</span>
+        <div>
+          <h2 id="layer-panel-title">图层与筛选</h2>
+          <span>${dataSourceLabel}</span>
+        </div>
+        <button
+          type="button"
+          class="layer-panel__close"
+          id="layer-panel-close"
+          aria-label="关闭图层面板"
+        >
+          ×
+        </button>
       </div>
       <div class="layer-list">
+        <label class="layer-control">
+          <input
+            type="checkbox"
+            id="osm-basemap-toggle"
+            ${useOnlineBasemap ? 'checked' : ''}
+          >
+          <span
+            class="layer-symbol layer-symbol--basemap"
+            aria-hidden="true"
+          ></span>
+          <span>在线OSM底图</span>
+        </label>
         <label class="layer-control">
           <input
             type="checkbox"
@@ -245,8 +301,9 @@ document.querySelector('#app').innerHTML = `
             <dd>6</dd>
           </div>
         </dl>
-        <p>数据来源：OpenStreetMap · <time datetime="2026-07-12">2026-07-12</time></p>
+        <p>数据来源：© OpenStreetMap contributors · <time datetime="2026-07-12">2026-07-12</time></p>
         <p>数量仅反映获取时已标注对象</p>
+        <p>在线底图不可用时显示项目道路简图</p>
       </section>
     </aside>
 <aside
@@ -289,6 +346,43 @@ document.querySelector('#app').innerHTML = `
 </aside>
   </main>
 `
+
+const layerPanel = document.querySelector('#layer-panel')
+const layerPanelToggle = document.querySelector('#layer-panel-toggle')
+const layerPanelClose = document.querySelector('#layer-panel-close')
+const mobileLayerPanelQuery = window.matchMedia('(max-width: 720px)')
+
+function setLayerPanelOpen(open) {
+  if (!mobileLayerPanelQuery.matches) {
+    layerPanel.classList.remove('is-open')
+    layerPanel.removeAttribute('aria-hidden')
+    layerPanel.inert = false
+    layerPanelToggle.setAttribute('aria-expanded', 'false')
+    return
+  }
+
+  layerPanel.classList.toggle('is-open', open)
+  layerPanel.setAttribute('aria-hidden', String(!open))
+  layerPanel.inert = !open
+  layerPanelToggle.setAttribute('aria-expanded', String(open))
+}
+
+layerPanelToggle.addEventListener('click', () => {
+  setLayerPanelOpen(!layerPanel.classList.contains('is-open'))
+})
+
+layerPanelClose.addEventListener('click', () => setLayerPanelOpen(false))
+
+mobileLayerPanelQuery.addEventListener('change', () => setLayerPanelOpen(false))
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && mobileLayerPanelQuery.matches) {
+    setLayerPanelOpen(false)
+    layerPanelToggle.focus()
+  }
+})
+
+setLayerPanelOpen(false)
 
 const geoserverWmsUrl = '/geoserver/huyi_space/wms'
 const osmSource = new OSM()
@@ -365,10 +459,28 @@ const studyAreaLayer = new VectorLayer({
 
 overlayLayers.set('study-area', studyAreaLayer)
 
+const fallbackBasemapLayer = useStaticData
+  ? new VectorLayer({
+      source: staticSources.get('roads'),
+      style: (feature) =>
+        fallbackMajorRoadClasses.has(feature.get('road_class'))
+          ? fallbackMajorRoadStyle
+          : fallbackLocalRoadStyle,
+      zIndex: -2,
+    })
+  : null
+
+const osmLayer = new TileLayer({
+  source: osmSource,
+  visible: useOnlineBasemap,
+  zIndex: -1,
+})
+
 const map = new OLMap({
   target: 'map',
   layers: [
-    new TileLayer({ source: osmSource }),
+    ...(fallbackBasemapLayer ? [fallbackBasemapLayer] : []),
+    osmLayer,
     ...layerDefinitions.map(({ id }) => overlayLayers.get(id)),
     studyAreaLayer,
   ],
@@ -379,6 +491,10 @@ const map = new OLMap({
   controls: defaultControls().extend([
     new ScaleLine({ units: 'metric', bar: true, steps: 2, text: true, minWidth: 110 }),
   ]),
+})
+
+document.querySelector('#osm-basemap-toggle').addEventListener('change', (event) => {
+  osmLayer.setVisible(event.currentTarget.checked)
 })
 
 const featureInfoPanel = document.querySelector('#feature-info')
