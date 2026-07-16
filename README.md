@@ -1,158 +1,110 @@
-# 沪医空间——上海社区医疗设施空间数据治理与地图服务项目
+# 沪医空间（Shanghai MedMap）
 
+上海社区医疗设施空间数据治理与地图服务项目
 
+[![Deploy WebGIS to GitHub Pages](https://github.com/cokaleX/shanghai-medmap-gis/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/cokaleX/shanghai-medmap-gis/actions/workflows/deploy-pages.yml)
 
-英文名称：Shanghai MedMap
+[在线演示](https://cokalex.github.io/shanghai-medmap-gis/) · [源码仓库](https://github.com/cokaleX/shanghai-medmap-gis) · [完整学习与验证记录](docs/learning_log.md)
 
-在线演示：[https://cokalex.github.io/shanghai-medmap-gis/](https://cokalex.github.io/shanghai-medmap-gis/)
+![沪医空间WebGIS桌面端成果](docs/images/webgis-overview.png)
 
-源码仓库：[https://github.com/cokaleX/shanghai-medmap-gis](https://github.com/cokaleX/shanghai-medmap-gis)
+## 项目概览
 
+本项目以徐家汇公共地标周边约9平方公里为研究区，完整实践了从开放空间数据获取、GIS数据治理、PostGIS空间分析、GeoServer地图服务发布到OpenLayers WebGIS展示的工作流程。
 
+公开网页使用静态GeoJSON展示核心成果，便于直接访问；本地完整模式通过PostGIS和GeoServer提供WMS、WFS及GetFeatureInfo服务。项目不用于医疗诊断、医疗决策或医院质量评价。
 
-## 项目简介
+## 核心成果
 
+- 建立3千米 × 3千米研究区，工作坐标系为EPSG:32651。
+- 对OSM医院、诊所、药店和道路数据完成裁剪、重投影、几何检查、重复检查及字段标准化。
+- 形成医院14条、诊所1条、药店6条、道路线1095条标准成果，并保留可追溯的 `source_id`。
+- 在PostGIS中建立主键、来源ID唯一约束、非空约束和GiST空间索引。
+- 使用空间SQL完成设施分类统计、1千米范围查询、最近道路查询，并用 `EXPLAIN (ANALYZE, BUFFERS)` 对比索引最近邻与全量距离排序。
+- 使用只读数据库账号在GeoServer发布WMS/WFS服务，配置可版本控制的SLD样式和组合图层组。
+- 构建OpenLayers交互地图，实现图层控制、道路分类筛选、设施属性气泡、天地图/OSM/简洁底图切换和移动端抽屉。
+- 通过GitHub Actions自动构建并发布GitHub Pages静态演示，同时明确其与公网后端服务的能力边界。
 
+## 技术架构
 
-这是一个面向GIS全流程学习的个人实践项目。项目计划围绕上海小范围研究区域，使用开放空间数据完成数据获取、质量检查、字段标准化、空间数据库管理、地图服务发布和基础WebGIS展示。
+```mermaid
+flowchart LR
+    A[OSM / Overpass] --> B[QGIS 数据治理]
+    B --> C[GeoPackage 标准成果]
+    C --> D[PostgreSQL / PostGIS]
+    D --> E[GeoServer WMS / WFS]
+    E --> F[OpenLayers 本地完整模式]
+    C --> G[EPSG:4326 GeoJSON]
+    G --> H[GitHub Pages 静态演示]
+```
 
+| 环节 | 技术与用途 |
+|---|---|
+| 数据获取 | OpenStreetMap、QuickOSM、Overpass API |
+| 数据治理 | QGIS、GeoPackage、EPSG:32651 |
+| 空间数据库 | PostgreSQL 18、PostGIS 3.6、GiST索引、空间SQL |
+| 地图服务 | GeoServer 3、WMS、WFS、SLD、只读数据库角色 |
+| WebGIS | OpenLayers 10、JavaScript、Vite、GeoJSON |
+| 发布 | Git、GitHub Actions、GitHub Pages |
 
+## WebGIS功能
 
-本项目不用于医疗诊断、医疗决策或医院质量评价。
+- 医院、诊所、药店、道路和研究区边界独立显示控制。
+- 道路按主干、社区、慢行、服务、规划/施工五组筛选。
+- 点击医疗设施查看名称、设施类型、来源编号和数据来源。
+- 天地图矢量底图与中文注记为国内演示默认底图，并保留OpenStreetMap和项目道路简图两级备选。
+- 720px以下使用默认收起的图层抽屉，保证主要地图区域可浏览。
+- 本机默认进入GeoServer服务模式，非本机域名自动使用静态GeoJSON模式。
 
-公开网页采用静态GeoJSON演示，不直接连接本机PostGIS或GeoServer；本地完整模式仍通过GeoServer提供WMS和GetFeatureInfo服务。
+## 项目结构
 
+```text
+data/               OSM原始数据、处理过程数据与标准成果
+docs/               数据来源、字段字典、环境配置和学习日志
+geoserver/styles/   可版本控制的SLD样式
+qgis/               QGIS项目文件
+sql/                已验证的PostGIS查询脚本
+web/                OpenLayers与Vite前端、静态演示数据
+.github/workflows/  GitHub Pages自动部署工作流
+```
 
+## 运行方式
 
-## 研究区域
+### 静态演示模式
 
+```powershell
+git clone https://github.com/cokaleX/shanghai-medmap-gis.git
+cd shanghai-medmap-gis\web
+npm ci
+npm run dev -- --host 127.0.0.1
+```
 
+访问 `http://127.0.0.1:5173/?mode=static`。未配置天地图密钥时会自动使用OpenStreetMap，也可通过 `?basemap=local` 验证无在线底图场景。
 
-以上海徐家汇站公共坐标为中心，已建立3千米 × 3千米、9平方公里的方形研究区域。研究区采用EPSG:32651，不涉及个人家庭住址。
+如需本地测试天地图，可复制 `web/.env.example` 为 `web/.env.local` 并填写 `VITE_TIANDITU_TOKEN`。真实密钥不会进入Git；生产环境通过GitHub Actions Secret注入，并使用域名白名单限制调用来源。
 
+### 本地完整服务模式
 
+本地完整模式需要先启动PostgreSQL/PostGIS和GeoServer，再在 `web` 目录运行开发服务器。数据库、GeoServer和前端配置说明分别见：
 
-## 计划技术路线
+- [PostgreSQL/PostGIS配置](docs/database_setup.md)
+- [GeoServer发布配置](docs/geoserver_setup.md)
+- [数据字段字典](docs/data_dictionary.md)
+- [数据来源与许可](docs/data_source.md)
 
+## 数据范围与限制
 
+- 研究区中心使用徐家汇站公共坐标作为可复现参考，不涉及个人家庭住址。
+- 设施数量只反映2026-07-12获取时OpenStreetMap中已标注且通过本项目规则清洗的对象，不代表完整、实时或官方医疗机构名录。
+- 医院面到目标点的距离采用几何最短距离，不等同于入口距离或实际出行距离。
+- GitHub Pages只托管静态前端和GeoJSON，不代表PostGIS与GeoServer后端已部署到公网。
 
-OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → OpenLayers
+## 许可与署名
 
-
-
-## 当前进度
-
-
-
-- 当前阶段：阶段7——正在进行测试、整理和发布
-
-- 已确认QGIS和Git环境
-
-- 已创建QGIS项目
-
-- QGIS项目坐标系：EPSG:32651
-
-- 已创建研究区边界GeoPackage
-
-- 已验证研究区包含1个面要素，面积为9平方公里
-
-- 已获取医院、诊所、药店和道路OSM原始数据
-
-- 已记录查询条件、数据许可和初步质量检查结果
-
-- 已完成研究区裁剪、坐标转换、几何检查、重复检查和字段标准化
-
-- 已生成医院、诊所、药店和道路线标准GeoPackage
-
-- 已安装并验证PostgreSQL 18.4与PostGIS 3.6.2
-
-- 已创建项目数据库 `huyi_space` 和 `processed` schema
-
-- 已将四个标准成果导入PostGIS，并验证记录数、字段类型、SRID、几何类型和索引
-
-- 已完成设施分类统计、空值检查、1千米范围查询和设施到最近道路查询
-
-- 已使用 `EXPLAIN (ANALYZE, BUFFERS)` 对比GiST最近邻索引与全量距离排序
-
-- 已生成并验证可重复执行的只读SQL脚本
-
-- 已安装并验证Temurin JDK 17与GeoServer 3.0.0
-
-- 已使用只读数据库账号发布医院、诊所、药店和道路图层
-
-- 已验证WMS图片服务、WFS矢量服务和QGIS客户端空间对齐
-
-- 已创建可版本控制的SLD样式及医疗设施组合图层组
-
-- 已安装并验证Node.js、npm和Vite前端开发环境
-
-- 已创建原生JavaScript与OpenLayers Web地图项目
-
-- 已加载EPSG:3857的OSM底图，并定位到徐家汇研究区
-
-- 已接入道路、医院、诊所和药店四个GeoServer WMS图层
-
-- 已实现独立图层开关、全部显示和全部隐藏功能
-
-- 已实现基于 `road_class` 和GeoServer `CQL_FILTER` 的可折叠道路分组多选筛选
-
-- 已通过Vite开发代理解决浏览器跨域访问GeoServer的问题
-
-- 已实现医院、诊所和药店WMS图层的点击属性查询
-
-- 已加载研究区GeoJSON边界，并明确展示9平方公里数据处理范围
-
-- 已使用OpenLayers `Overlay` 实现桌面端坐标气泡和窄屏底部属性卡
-
-- 已加入真实设施数量、OSM获取日期和数据完整性说明
-
-- 已验证WMS请求参数、地图拖动缩放、响应式布局和正式构建
-
-- 已将四类标准成果导出为EPSG:4326 GeoJSON，并完成字段、记录数和几何类型复核
-
-- 已实现本地GeoServer服务模式与GitHub Pages静态演示模式自动切换
-
-- 已验证静态模式的图层显示、道路筛选、设施气泡、响应式布局和生产构建
-
-- 已使用GitHub Actions自动构建并发布GitHub Pages静态演示
-
-- 已增加基于项目道路GeoJSON的简洁底图兜底，在线OSM瓦片不可用时仍可浏览核心空间成果
-
-- 已将720px以下图层面板改为默认收起的移动端抽屉
-
-- 已接入天地图矢量底图与中文注记，并保留OpenStreetMap和项目道路简图两级备选
-
-- 已将本地天地图密钥与Git仓库隔离，并为GitHub Pages构建预留Actions Secret注入方式
-
-
-
-## WebGIS运行模式
-
-
-
-- 本地完整模式：启动GeoServer后在 `web` 目录执行 `npm run dev`，通过WMS显示图层并使用GetFeatureInfo查询属性。
-
-- 静态演示模式：访问本地页面时添加 `?mode=static`，直接加载 `web/public/data` 中的GeoJSON；部署到非本机域名后会自动使用此模式。
-
-- 配置 `VITE_TIANDITU_TOKEN` 后默认使用天地图矢量底图与中文注记；图层面板可切换为OpenStreetMap或项目道路简图。
-
-- 本地开发密钥保存在不进入Git的 `web/.env.local`；`web/.env.example` 只保留变量名称，不包含真实密钥。
-
-- GitHub Pages通过仓库Actions Secret `VITE_TIANDITU_TOKEN` 注入生产密钥；生产密钥仅允许正式演示域名，本地域名只在测试时临时放行。
-
-- 可使用 `?basemap=tianditu`、`?basemap=osm` 或 `?basemap=local` 指定底图；没有天地图密钥时自动退回OpenStreetMap。
-
-- 720px以下页面默认只显示“图层”按钮，需要时打开抽屉，关闭后地图恢复完整可视区域。
-
-- `web/vite.config.js` 使用相对构建路径，使生产成果可以发布在GitHub Pages的仓库子路径下。
-
-- 静态演示用于作品展示和基础交互，不代表PostGIS与GeoServer后端已经部署到公网。
-
-
+- 本项目自行编写的代码采用 [MIT License](LICENSE)。
+- OSM原始数据及其衍生成果遵循Open Database License（ODbL），数据署名为 © OpenStreetMap contributors。
+- 天地图和OpenStreetMap在线底图仅作为参考地图服务使用，分别遵循其服务条款与署名要求。
 
 ## 项目说明
 
-
-
-本项目是本人在指导下逐步完成的第一个完整GIS学习项目。项目将保留数据来源、处理步骤、质量检查结果和验证记录，并如实说明AI辅助的范围。
-
+这是本人完成的第一个完整GIS全流程学习项目。项目在AI指导与辅助下逐步实施，本人负责实际软件操作、数据处理、结果验证、问题复现和Git提交管理；完整过程、错误与验证证据保留在 [学习日志](docs/learning_log.md) 中。
