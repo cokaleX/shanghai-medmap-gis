@@ -9,6 +9,7 @@ Desktop.ini
 *.gpkg-wal
 *.gpkg-shm
 *.gpkg-journal
+web/public/data/*.qmd
 .env
 .env.*
 !.env.example
