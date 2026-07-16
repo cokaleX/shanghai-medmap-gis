@@ -8,6 +8,7 @@ import TileLayer from 'ol/layer/Tile.js'
 import VectorLayer from 'ol/layer/Vector.js'
 import OSM from 'ol/source/OSM.js'
 import TileWMS from 'ol/source/TileWMS.js'
+import XYZ from 'ol/source/XYZ.js'
 import VectorSource from 'ol/source/Vector.js'
 import GeoJSON from 'ol/format/GeoJSON.js'
 import ScaleLine from 'ol/control/ScaleLine.js'
@@ -69,7 +70,17 @@ const useStaticData =
 const dataSourceLabel = useStaticData ? '静态 GeoJSON' : 'GeoServer WMS'
 const initialStatusText = useStaticData ? '静态数据加载中' : '地图服务加载中'
 const publicDataUrl = (filename) => `${import.meta.env.BASE_URL}data/${filename}`
-const useOnlineBasemap = queryParameters.get('basemap') !== 'local'
+const tiandituToken = (import.meta.env.VITE_TIANDITU_TOKEN || '').trim()
+const availableBasemapIds = new Set(['tianditu', 'osm', 'local'])
+const requestedBasemap = queryParameters.get('basemap')
+const defaultBasemap = tiandituToken ? 'tianditu' : 'osm'
+let activeBasemap = availableBasemapIds.has(requestedBasemap)
+  ? requestedBasemap
+  : defaultBasemap
+
+if (activeBasemap === 'tianditu' && !tiandituToken) {
+  activeBasemap = 'osm'
+}
 
 let selectedRoadClasses = new Set(
   roadGroupDefinitions.flatMap((group) => group.classes),
@@ -206,19 +217,42 @@ document.querySelector('#app').innerHTML = `
           ×
         </button>
       </div>
-      <div class="layer-list">
-        <label class="layer-control">
+      <fieldset class="basemap-selector">
+        <legend>底图</legend>
+        <label class="basemap-option">
           <input
-            type="checkbox"
-            id="osm-basemap-toggle"
-            ${useOnlineBasemap ? 'checked' : ''}
+            type="radio"
+            name="basemap"
+            data-basemap-id="tianditu"
+            ${activeBasemap === 'tianditu' ? 'checked' : ''}
+            ${tiandituToken ? '' : 'disabled'}
           >
-          <span
-            class="layer-symbol layer-symbol--basemap"
-            aria-hidden="true"
-          ></span>
-          <span>在线OSM底图</span>
+          <span class="layer-symbol layer-symbol--tianditu" aria-hidden="true"></span>
+          <span>天地图</span>
+          ${tiandituToken ? '' : '<small>需配置密钥</small>'}
         </label>
+        <label class="basemap-option">
+          <input
+            type="radio"
+            name="basemap"
+            data-basemap-id="osm"
+            ${activeBasemap === 'osm' ? 'checked' : ''}
+          >
+          <span class="layer-symbol layer-symbol--basemap" aria-hidden="true"></span>
+          <span>OpenStreetMap</span>
+        </label>
+        <label class="basemap-option">
+          <input
+            type="radio"
+            name="basemap"
+            data-basemap-id="local"
+            ${activeBasemap === 'local' ? 'checked' : ''}
+          >
+          <span class="layer-symbol layer-symbol--local" aria-hidden="true"></span>
+          <span>简洁底图</span>
+        </label>
+      </fieldset>
+      <div class="layer-list">
         <label class="layer-control">
           <input
             type="checkbox"
@@ -386,6 +420,17 @@ setLayerPanelOpen(false)
 
 const geoserverWmsUrl = '/geoserver/huyi_space/wms'
 const osmSource = new OSM()
+const createTiandituSource = (layerCode) =>
+  new XYZ({
+    urls: Array.from(
+      { length: 8 },
+      (_, index) =>
+        `https://t${index}.tianditu.gov.cn/DataServer?T=${layerCode}&x={x}&y={y}&l={z}&tk=${encodeURIComponent(tiandituToken)}`,
+    ),
+    attributions: '地图服务 © 国家地理信息公共服务平台 天地图',
+    maxZoom: 18,
+    transition: 180,
+  })
 const wmsSources = new globalThis.Map()
 const staticSources = new globalThis.Map()
 const overlayLayers = new globalThis.Map()
@@ -472,8 +517,20 @@ const fallbackBasemapLayer = useStaticData
 
 const osmLayer = new TileLayer({
   source: osmSource,
-  visible: useOnlineBasemap,
+  visible: activeBasemap === 'osm',
   zIndex: -1,
+})
+
+const tiandituVectorLayer = new TileLayer({
+  source: createTiandituSource('vec_w'),
+  visible: activeBasemap === 'tianditu',
+  zIndex: -1,
+})
+
+const tiandituLabelLayer = new TileLayer({
+  source: createTiandituSource('cva_w'),
+  visible: activeBasemap === 'tianditu',
+  zIndex: 0,
 })
 
 const map = new OLMap({
@@ -481,6 +538,8 @@ const map = new OLMap({
   layers: [
     ...(fallbackBasemapLayer ? [fallbackBasemapLayer] : []),
     osmLayer,
+    tiandituVectorLayer,
+    tiandituLabelLayer,
     ...layerDefinitions.map(({ id }) => overlayLayers.get(id)),
     studyAreaLayer,
   ],
@@ -493,8 +552,26 @@ const map = new OLMap({
   ]),
 })
 
-document.querySelector('#osm-basemap-toggle').addEventListener('change', (event) => {
-  osmLayer.setVisible(event.currentTarget.checked)
+function setBasemap(basemapId) {
+  const nextBasemap =
+    basemapId === 'tianditu' && !tiandituToken ? 'osm' : basemapId
+
+  activeBasemap = nextBasemap
+  tiandituVectorLayer.setVisible(nextBasemap === 'tianditu')
+  tiandituLabelLayer.setVisible(nextBasemap === 'tianditu')
+  osmLayer.setVisible(nextBasemap === 'osm')
+
+  document.querySelectorAll('[data-basemap-id]').forEach((radio) => {
+    radio.checked = radio.dataset.basemapId === nextBasemap
+  })
+}
+
+document.querySelectorAll('[data-basemap-id]').forEach((radio) => {
+  radio.addEventListener('change', (event) => {
+    if (event.currentTarget.checked) {
+      setBasemap(event.currentTarget.dataset.basemapId)
+    }
+  })
 })
 
 const featureInfoPanel = document.querySelector('#feature-info')
@@ -778,4 +855,22 @@ if (useStaticData) {
   }
 }
 
-window.addEventListener('resize', () => map.updateSize())
+const mapElement = map.getTargetElement()
+
+function syncMapSize() {
+  const { width, height } = mapElement.getBoundingClientRect()
+
+  if (width > 0 && height > 0) {
+    map.updateSize()
+  }
+}
+
+const mapResizeObserver = new ResizeObserver(syncMapSize)
+mapResizeObserver.observe(mapElement)
+
+requestAnimationFrame(() => {
+  requestAnimationFrame(syncMapSize)
+})
+
+window.addEventListener('load', syncMapSize, { once: true })
+window.addEventListener('resize', syncMapSize)

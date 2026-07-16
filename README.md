@@ -120,6 +120,10 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 - 已将720px以下图层面板改为默认收起的移动端抽屉
 
+- 已接入天地图矢量底图与中文注记，并保留OpenStreetMap和项目道路简图两级备选
+
+- 已将本地天地图密钥与Git仓库隔离，并为GitHub Pages构建预留Actions Secret注入方式
+
 
 
 ## WebGIS运行模式
@@ -130,7 +134,13 @@ OpenStreetMap → QGIS → GeoPackage → PostgreSQL/PostGIS → GeoServer → O
 
 - 静态演示模式：访问本地页面时添加 `?mode=static`，直接加载 `web/public/data` 中的GeoJSON；部署到非本机域名后会自动使用此模式。
 
-- 静态模式保留在线OSM底图，同时在下方绘制项目道路简图；可使用 `?basemap=local` 强制验证无在线底图场景。
+- 配置 `VITE_TIANDITU_TOKEN` 后默认使用天地图矢量底图与中文注记；图层面板可切换为OpenStreetMap或项目道路简图。
+
+- 本地开发密钥保存在不进入Git的 `web/.env.local`；`web/.env.example` 只保留变量名称，不包含真实密钥。
+
+- GitHub Pages通过仓库Actions Secret `VITE_TIANDITU_TOKEN` 注入生产密钥；生产密钥仅允许正式演示域名，本地域名只在测试时临时放行。
+
+- 可使用 `?basemap=tianditu`、`?basemap=osm` 或 `?basemap=local` 指定底图；没有天地图密钥时自动退回OpenStreetMap。
 
 - 720px以下页面默认只显示“图层”按钮，需要时打开抽屉，关闭后地图恢复完整可视区域。
 

@@ -41,6 +41,8 @@ jobs:
 
       - name: Build static site
         working-directory: web
+        env:
+          VITE_TIANDITU_TOKEN: ${{ secrets.VITE_TIANDITU_TOKEN }}
         run: npm run build
 
       - name: Upload GitHub Pages artifact
